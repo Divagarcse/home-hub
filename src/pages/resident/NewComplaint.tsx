@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -48,19 +48,35 @@ export default function NewComplaint() {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
-      setImages((prev) => [...prev, ...newFiles].slice(0, 5));
+      setImages(prev => [...prev, ...newFiles].slice(0, 5));
     }
   };
 
   const removeImage = (index: number) => {
-    setImages((prev) => prev.filter((_, i) => i !== index));
+    setImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const resetForm = () => {
+    setTitle("");
+    setDescription("");
+    setCategory("other");
+    setLandmark("");
+    setPriority("medium");
+    setImages([]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
-    setLoading(true);
+    if (!user) {
+      toast.error("You must be logged in");
+      return;
+    }
+    if (!title.trim() || !description.trim() || !block.trim() || !roomNumber.trim()) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
 
+    setLoading(true);
     try {
       // Create complaint
       const { data: complaint, error } = await supabase
@@ -68,11 +84,11 @@ export default function NewComplaint() {
         .insert({
           resident_id: user.id,
           category,
-          title,
-          description,
-          landmark: landmark || null,
-          block,
-          room_number: roomNumber,
+          title: title.trim(),
+          description: description.trim(),
+          landmark: landmark.trim() || null,
+          block: block.trim(),
+          room_number: roomNumber.trim(),
           priority,
         })
         .select()
@@ -83,7 +99,7 @@ export default function NewComplaint() {
       // Upload images
       for (const file of images) {
         const fileName = `${complaint.id}/${Date.now()}-${file.name}`;
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from("complaint-images")
           .upload(fileName, file);
 
@@ -93,7 +109,6 @@ export default function NewComplaint() {
         }
 
         const { data: urlData } = supabase.storage.from("complaint-images").getPublicUrl(fileName);
-
         await supabase.from("complaint_images").insert({
           complaint_id: complaint.id,
           image_url: urlData.publicUrl,
@@ -107,7 +122,7 @@ export default function NewComplaint() {
         .eq("role", "admin");
 
       if (admins) {
-        const notifications = admins.map((a) => ({
+        const notifications = admins.map(a => ({
           user_id: a.user_id,
           message: `New complaint: "${title}" from Block ${block}`,
           complaint_id: complaint.id,
@@ -116,8 +131,10 @@ export default function NewComplaint() {
       }
 
       toast.success("Complaint submitted successfully!");
+      resetForm();
       navigate("/resident");
     } catch (err: any) {
+      console.error("Submit error:", err);
       toast.error(err.message || "Failed to submit complaint");
     } finally {
       setLoading(false);
@@ -135,10 +152,10 @@ export default function NewComplaint() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label>Category</Label>
-                  <Select value={category} onValueChange={(v) => setCategory(v as Category)}>
+                  <Select value={category} onValueChange={v => setCategory(v as Category)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {categories.map((c) => (
+                      {categories.map(c => (
                         <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
                       ))}
                     </SelectContent>
@@ -146,7 +163,7 @@ export default function NewComplaint() {
                 </div>
                 <div>
                   <Label>Priority</Label>
-                  <Select value={priority} onValueChange={(v) => setPriority(v as Priority)}>
+                  <Select value={priority} onValueChange={v => setPriority(v as Priority)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="low">Low</SelectItem>
@@ -158,28 +175,28 @@ export default function NewComplaint() {
               </div>
 
               <div>
-                <Label htmlFor="title">Title</Label>
-                <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={200} />
+                <Label htmlFor="title">Title *</Label>
+                <Input id="title" value={title} onChange={e => setTitle(e.target.value)} required maxLength={200} placeholder="Brief summary of the issue" />
               </div>
 
               <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} required rows={4} maxLength={2000} />
+                <Label htmlFor="description">Description *</Label>
+                <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} required rows={4} maxLength={2000} placeholder="Describe the issue in detail" />
               </div>
 
               <div>
                 <Label htmlFor="landmark">Landmark</Label>
-                <Input id="landmark" value={landmark} onChange={(e) => setLandmark(e.target.value)} placeholder="Near elevator, parking lot, etc." />
+                <Input id="landmark" value={landmark} onChange={e => setLandmark(e.target.value)} placeholder="Near elevator, parking lot, etc." />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="block">Block</Label>
-                  <Input id="block" value={block} onChange={(e) => setBlock(e.target.value)} required />
+                  <Label htmlFor="block">Block *</Label>
+                  <Input id="block" value={block} onChange={e => setBlock(e.target.value)} required />
                 </div>
                 <div>
-                  <Label htmlFor="room">Room Number</Label>
-                  <Input id="room" value={roomNumber} onChange={(e) => setRoomNumber(e.target.value)} required />
+                  <Label htmlFor="room">Room Number *</Label>
+                  <Input id="room" value={roomNumber} onChange={e => setRoomNumber(e.target.value)} required />
                 </div>
               </div>
 
@@ -189,14 +206,7 @@ export default function NewComplaint() {
                 <div className="mt-2 border-2 border-dashed border-border rounded-lg p-6 text-center">
                   <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
                   <p className="text-sm text-muted-foreground mb-2">Drop images here or click to browse</p>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleImageChange}
-                    className="hidden"
-                    id="image-upload"
-                  />
+                  <input type="file" accept="image/*" multiple onChange={handleImageChange} className="hidden" id="image-upload" />
                   <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById("image-upload")?.click()}>
                     Choose Files
                   </Button>
@@ -205,16 +215,10 @@ export default function NewComplaint() {
                   <div className="flex gap-2 mt-3 flex-wrap">
                     {images.map((file, i) => (
                       <div key={i} className="relative group">
-                        <img
-                          src={URL.createObjectURL(file)}
-                          alt={`Preview ${i + 1}`}
-                          className="h-16 w-16 rounded-md object-cover border border-border"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeImage(i)}
-                          className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
+                        <img src={URL.createObjectURL(file)} alt={`Preview ${i + 1}`}
+                          className="h-16 w-16 rounded-md object-cover border border-border" />
+                        <button type="button" onClick={() => removeImage(i)}
+                          className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                           <X className="h-3 w-3" />
                         </button>
                       </div>
