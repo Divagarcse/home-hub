@@ -56,7 +56,10 @@ export type Database = {
           priority: Database["public"]["Enums"]["complaint_priority"]
           resident_id: string
           room_number: string
+          sla_deadline: string | null
           status: Database["public"]["Enums"]["complaint_status"]
+          third_party_contact: string | null
+          third_party_name: string | null
           title: string
           updated_at: string
         }
@@ -72,7 +75,10 @@ export type Database = {
           priority?: Database["public"]["Enums"]["complaint_priority"]
           resident_id: string
           room_number: string
+          sla_deadline?: string | null
           status?: Database["public"]["Enums"]["complaint_status"]
+          third_party_contact?: string | null
+          third_party_name?: string | null
           title: string
           updated_at?: string
         }
@@ -88,11 +94,73 @@ export type Database = {
           priority?: Database["public"]["Enums"]["complaint_priority"]
           resident_id?: string
           room_number?: string
+          sla_deadline?: string | null
           status?: Database["public"]["Enums"]["complaint_status"]
+          third_party_contact?: string | null
+          third_party_name?: string | null
           title?: string
           updated_at?: string
         }
         Relationships: []
+      }
+      head_requests: {
+        Row: {
+          created_at: string
+          id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      internal_notes: {
+        Row: {
+          author_id: string
+          complaint_id: string
+          created_at: string
+          id: string
+          note: string
+        }
+        Insert: {
+          author_id: string
+          complaint_id: string
+          created_at?: string
+          id?: string
+          note: string
+        }
+        Update: {
+          author_id?: string
+          complaint_id?: string
+          created_at?: string
+          id?: string
+          note?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "internal_notes_complaint_id_fkey"
+            columns: ["complaint_id"]
+            isOneToOne: false
+            referencedRelation: "complaints"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
